@@ -64,6 +64,12 @@ impl DecoratorRegistry {
     }
 }
 
+/// Decorator ids are only unique within an extension, so the registry is keyed
+/// by extension id and decorator id.
+fn decorator_key(extension_id: &str, decorator_id: &str) -> Arc<str> {
+    format!("{extension_id}/{decorator_id}").into()
+}
+
 struct RegistryProxy {
     registry: Entity<DecoratorRegistry>,
 }
@@ -76,9 +82,10 @@ impl ExtensionBufferDecoratorProxy for RegistryProxy {
         languages: Vec<Arc<str>>,
         cx: &mut App,
     ) {
+        let key = decorator_key(&extension.manifest().id, &decorator_id);
         self.registry.update(cx, |registry, cx| {
             registry.decorators.insert(
-                decorator_id.clone(),
+                key,
                 RegisteredDecorator {
                     id: decorator_id,
                     extension,
@@ -89,9 +96,15 @@ impl ExtensionBufferDecoratorProxy for RegistryProxy {
         });
     }
 
-    fn unregister_buffer_decorator(&self, decorator_id: Arc<str>, cx: &mut App) {
+    fn unregister_buffer_decorator(
+        &self,
+        extension_id: Arc<str>,
+        decorator_id: Arc<str>,
+        cx: &mut App,
+    ) {
+        let key = decorator_key(&extension_id, &decorator_id);
         self.registry.update(cx, |registry, cx| {
-            registry.decorators.remove(&decorator_id);
+            registry.decorators.remove(&key);
             cx.emit(DecoratorsChanged);
         });
     }

@@ -382,7 +382,12 @@ pub trait ExtensionBufferDecoratorProxy: Send + Sync + 'static {
         cx: &mut App,
     );
 
-    fn unregister_buffer_decorator(&self, decorator_id: Arc<str>, cx: &mut App);
+    fn unregister_buffer_decorator(
+        &self,
+        extension_id: Arc<str>,
+        decorator_id: Arc<str>,
+        cx: &mut App,
+    );
 }
 
 impl ExtensionBufferDecoratorProxy for ExtensionHostProxy {
@@ -400,12 +405,17 @@ impl ExtensionBufferDecoratorProxy for ExtensionHostProxy {
         proxy.register_buffer_decorator(extension, decorator_id, languages, cx)
     }
 
-    fn unregister_buffer_decorator(&self, decorator_id: Arc<str>, cx: &mut App) {
+    fn unregister_buffer_decorator(
+        &self,
+        extension_id: Arc<str>,
+        decorator_id: Arc<str>,
+        cx: &mut App,
+    ) {
         let Some(proxy) = self.buffer_decorator_proxy.read().clone() else {
             return;
         };
 
-        proxy.unregister_buffer_decorator(decorator_id, cx)
+        proxy.unregister_buffer_decorator(extension_id, decorator_id, cx)
     }
 }
 

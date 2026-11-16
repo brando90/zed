@@ -1415,8 +1415,11 @@ impl ExtensionStore {
                 self.proxy.unregister_context_server(server_id.clone(), cx);
             }
             for decorator_id in extension.manifest.buffer_decorators.keys() {
-                self.proxy
-                    .unregister_buffer_decorator(decorator_id.clone(), cx);
+                self.proxy.unregister_buffer_decorator(
+                    extension.manifest.id.clone(),
+                    decorator_id.clone(),
+                    cx,
+                );
             }
             for adapter in extension.manifest.debug_adapters.keys() {
                 self.proxy.unregister_debug_adapter(adapter.clone());

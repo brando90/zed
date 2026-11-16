@@ -4414,7 +4414,13 @@ async fn test_buffer_decorator_extension_runs_in_the_host(cx: &mut TestAppContex
                 .push((extension, decorator_id, languages));
         }
 
-        fn unregister_buffer_decorator(&self, _decorator_id: Arc<str>, _cx: &mut gpui::App) {}
+        fn unregister_buffer_decorator(
+            &self,
+            _extension_id: Arc<str>,
+            _decorator_id: Arc<str>,
+            _cx: &mut gpui::App,
+        ) {
+        }
     }
 
     let root_dir = util::dev_repo_root().expect("requires a repository checkout");

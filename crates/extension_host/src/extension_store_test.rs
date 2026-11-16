@@ -4389,3 +4389,113 @@ impl Extension for FakeExtension {
         anyhow::bail!("not supported by FakeExtension")
     }
 }
+
+/// Loads the real `markdown-live-preview` extension (built to WASM) in the
+/// extension host and asks it to decorate a Markdown text.
+#[gpui::test]
+async fn test_buffer_decorator_extension_runs_in_the_host(cx: &mut TestAppContext) {
+    init_test(cx);
+    cx.executor().allow_parking();
+
+    struct CapturingProxy {
+        registered: Arc<Mutex<Vec<(Arc<dyn Extension>, Arc<str>, Vec<Arc<str>>)>>>,
+    }
+
+    impl extension::ExtensionBufferDecoratorProxy for CapturingProxy {
+        fn register_buffer_decorator(
+            &self,
+            extension: Arc<dyn Extension>,
+            decorator_id: Arc<str>,
+            languages: Vec<Arc<str>>,
+            _cx: &mut gpui::App,
+        ) {
+            self.registered
+                .lock()
+                .push((extension, decorator_id, languages));
+        }
+
+        fn unregister_buffer_decorator(&self, _decorator_id: Arc<str>, _cx: &mut gpui::App) {}
+    }
+
+    let root_dir = util::dev_repo_root().expect("requires a repository checkout");
+    let cache_dir = root_dir.join("target");
+    let extension_dir = root_dir.join("extensions/markdown-live-preview");
+
+    let fs = RealFs::new(None, cx.executor());
+    let extensions_tree = TempTree::new(json!({ "installed": {}, "work": {} }));
+    let extensions_dir = extensions_tree.path().canonicalize().unwrap();
+
+    let registered = Arc::new(Mutex::new(Vec::new()));
+    let proxy = Arc::new(ExtensionHostProxy::new());
+    proxy.register_buffer_decorator_proxy(CapturingProxy {
+        registered: registered.clone(),
+    });
+
+    let builder_client = Arc::new(ReqwestClient::user_agent("Zed test").unwrap());
+    let extension_store = cx.new(|cx| {
+        ExtensionStore::new(
+            extensions_dir,
+            Some(cache_dir),
+            proxy,
+            fs,
+            FakeHttpClient::with_404_response(),
+            builder_client,
+            None,
+            NodeRuntime::unavailable(),
+            cx,
+        )
+    });
+
+    let mut events = cx.events(&extension_store);
+    let executor = cx.executor();
+    let _debounce = cx.executor().spawn({
+        let executor = executor.clone();
+        async move {
+            while let Some(event) = events.next().await {
+                if let Event::StartedReloading = event {
+                    executor.advance_clock(RELOAD_DEBOUNCE_DURATION);
+                }
+            }
+        }
+    });
+
+    extension_store
+        .update(cx, |store, cx| store.install_dev_extension(extension_dir, cx))
+        .await
+        .unwrap();
+    cx.executor().run_until_parked();
+
+    let (extension, decorator_id, languages) = registered
+        .lock()
+        .first()
+        .cloned()
+        .expect("the decorator was registered");
+    assert_eq!(&*decorator_id, "markdown-live-preview");
+    assert_eq!(languages, vec![Arc::<str>::from("Markdown")]);
+
+    let text = "# Héllo **wörld** and `code`\r\n- [ ] task [a link](http://x.y)\r\n".to_string();
+    let decorations = extension
+        .decorate_buffer(decorator_id, text.clone())
+        .await
+        .unwrap()
+        .sanitized(&text);
+
+    let hidden = |decorations: &extension::BufferDecorations| {
+        decorations
+            .concealments
+            .iter()
+            .map(|c| (text[c.range.clone()].to_string(), c.replacement.clone()))
+            .collect::<Vec<_>>()
+    };
+    let hidden = hidden(&decorations);
+    assert!(hidden.contains(&("# ".to_string(), None)), "{hidden:?}");
+    assert!(hidden.contains(&("**".to_string(), None)), "{hidden:?}");
+    assert!(hidden.contains(&("`".to_string(), None)), "{hidden:?}");
+    assert!(
+        decorations
+            .styles
+            .iter()
+            .any(|s| s.style == extension::TextStyle::Heading1),
+        "{decorations:?}"
+    );
+}

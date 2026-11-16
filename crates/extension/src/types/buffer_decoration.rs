@@ -55,7 +55,8 @@ impl BufferDecorations {
     /// Drops everything that is malformed for a text of `text` and returns the
     /// rest: ranges that are empty, out of bounds, not on character
     /// boundaries, or concealments that overlap an earlier one; replacements
-    /// that are too long; and anything past [`MAX_DECORATIONS`]. A decorator
+    /// that are too long or hold a control character (a line break would break
+    /// the editor's layout); and anything past [`MAX_DECORATIONS`]. A decorator
     /// can therefore never make the editor panic or hide the same text twice.
     pub fn sanitized(mut self, text: &str) -> Self {
         let valid = |range: &Range<usize>| {
@@ -70,11 +71,13 @@ impl BufferDecorations {
         self.concealments.retain(|concealment| {
             valid(&concealment.range)
                 && valid(&concealment.reveal)
-                && concealment
-                    .replacement
-                    .as_ref()
-                    .is_none_or(|text| text.len() <= MAX_REPLACEMENT_BYTES)
+                && concealment.replacement.as_ref().is_none_or(|text| {
+                    text.len() <= MAX_REPLACEMENT_BYTES
+                        && !text.chars().any(|character| character.is_control())
+                })
         });
+        // Bound the work of sorting what a decorator returns.
+        self.concealments.truncate(MAX_DECORATIONS * 4);
         self.concealments
             .sort_by_key(|concealment| concealment.range.start);
         let mut end_of_previous = 0;
@@ -162,5 +165,29 @@ mod tests {
         .sanitized(text);
         assert!(decorations.styles.is_empty());
         assert!(decorations.concealments.is_empty());
+    }
+
+    #[test]
+    fn sanitizing_rejects_replacements_with_control_characters() {
+        let text = "- a";
+        let concealment = |replacement: &str| Concealment {
+            range: 0..1,
+            replacement: Some(replacement.to_string()),
+            reveal: 0..1,
+        };
+        for bad in ["\n", "a\r", "\t", "\u{7f}"] {
+            let decorations = BufferDecorations {
+                styles: Vec::new(),
+                concealments: vec![concealment(bad)],
+            }
+            .sanitized(text);
+            assert!(decorations.concealments.is_empty(), "{bad:?} is kept");
+        }
+        let decorations = BufferDecorations {
+            styles: Vec::new(),
+            concealments: vec![concealment("•")],
+        }
+        .sanitized(text);
+        assert_eq!(decorations.concealments.len(), 1);
     }
 }

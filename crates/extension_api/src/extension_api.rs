@@ -18,6 +18,7 @@ pub use wit::{
     CodeLabel, CodeLabelSpan, CodeLabelSpanLiteral, Command, DownloadedFileType, EnvVars,
     KeyValueStore, LanguageServerInstallationStatus, Project, Range, Worktree, download_file,
     make_file_executable,
+    zed::extension::buffer_decoration::{Concealment, Decorations, StyledRange, TextStyle},
     zed::extension::context_server::ContextServerConfiguration,
     zed::extension::dap::{
         AttachRequest, BuildTaskDefinition, BuildTaskDefinitionTemplatePayload, BuildTaskTemplate,
@@ -177,6 +178,19 @@ pub trait Extension: Send + Sync {
         _worktree: Option<&Worktree>,
     ) -> Result<SlashCommandOutput, String> {
         Err("`run_slash_command` not implemented".to_string())
+    }
+
+    /// Returns the decorations to draw over the text of a buffer: theme-driven
+    /// text styles, and ranges to hide or replace until the cursor touches them.
+    ///
+    /// Called for the decorators declared as `[buffer_decorators.<id>]` in
+    /// `extension.toml`, after a short delay, when the text of a buffer in one
+    /// of their languages changes. All ranges are byte offsets into `text`.
+    fn decorate_buffer(&self, _decorator_id: &str, _text: &str) -> Result<Decorations, String> {
+        Ok(Decorations {
+            styles: Vec::new(),
+            concealments: Vec::new(),
+        })
     }
 
     /// Returns the command used to start a context server.
@@ -489,6 +503,10 @@ impl wit::Guest for Component {
         worktree: Option<&Worktree>,
     ) -> Result<SlashCommandOutput, String> {
         extension().run_slash_command(command, args, worktree)
+    }
+
+    fn decorate_buffer(decorator_id: String, text: String) -> Result<Decorations, String> {
+        extension().decorate_buffer(&decorator_id, &text)
     }
 
     fn context_server_command(

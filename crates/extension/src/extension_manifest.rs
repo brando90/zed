@@ -114,6 +114,8 @@ pub struct ExtensionManifest {
     pub context_servers: BTreeMap<Arc<str>, ContextServerManifestEntry>,
     #[serde(default)]
     pub slash_commands: BTreeMap<Arc<str>, SlashCommandManifestEntry>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub buffer_decorators: BTreeMap<Arc<str>, BufferDecoratorManifestEntry>,
     #[serde(default)]
     pub snippets: Option<ExtensionSnippets>,
     #[serde(default)]
@@ -300,6 +302,14 @@ pub struct ContextServerManifestEntry {}
 pub struct SlashCommandManifestEntry {
     pub description: String,
     pub requires_argument: bool,
+}
+
+/// A decorator draws styles and concealments over the text of buffers in the
+/// listed languages, for example Markdown rendered inline in the editor.
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct BufferDecoratorManifestEntry {
+    /// The language names whose buffers this decorator is called for.
+    pub languages: Vec<Arc<str>>,
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Debug, Deserialize, Serialize)]
@@ -517,6 +527,7 @@ fn manifest_from_old_manifest(
         language_servers: Default::default(),
         context_servers: BTreeMap::default(),
         slash_commands: BTreeMap::default(),
+        buffer_decorators: Default::default(),
         snippets: None,
         capabilities: Vec::new(),
         debug_adapters: Default::default(),
@@ -551,6 +562,7 @@ mod tests {
             language_servers: BTreeMap::default(),
             context_servers: BTreeMap::default(),
             slash_commands: BTreeMap::default(),
+            buffer_decorators: Default::default(),
             snippets: None,
             capabilities: vec![],
             debug_adapters: Default::default(),

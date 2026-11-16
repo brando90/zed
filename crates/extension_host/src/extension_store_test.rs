@@ -399,6 +399,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
                         language_servers: BTreeMap::default(),
                         context_servers: BTreeMap::default(),
                         slash_commands: BTreeMap::default(),
+                        buffer_decorators: Default::default(),
                         snippets: None,
                         capabilities: Vec::new(),
                         debug_adapters: Default::default(),
@@ -430,6 +431,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
                         language_servers: BTreeMap::default(),
                         context_servers: BTreeMap::default(),
                         slash_commands: BTreeMap::default(),
+                        buffer_decorators: Default::default(),
                         snippets: None,
                         capabilities: Vec::new(),
                         debug_adapters: Default::default(),
@@ -616,6 +618,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
                 language_servers: BTreeMap::default(),
                 context_servers: BTreeMap::default(),
                 slash_commands: BTreeMap::default(),
+                buffer_decorators: Default::default(),
                 snippets: None,
                 capabilities: Vec::new(),
                 debug_adapters: Default::default(),
@@ -4193,6 +4196,7 @@ impl Extension for FakeExtension {
             language_servers: BTreeMap::default(),
             context_servers: BTreeMap::default(),
             slash_commands: BTreeMap::default(),
+            buffer_decorators: Default::default(),
             snippets: None,
             capabilities: Vec::new(),
             debug_adapters: BTreeMap::default(),
@@ -4310,6 +4314,14 @@ impl Extension for FakeExtension {
         _context_server_id: Arc<str>,
         _project: Arc<dyn ProjectDelegate>,
     ) -> anyhow::Result<Command> {
+        anyhow::bail!("not supported by FakeExtension")
+    }
+
+    async fn decorate_buffer(
+        &self,
+        _decorator_id: Arc<str>,
+        _text: String,
+    ) -> anyhow::Result<extension::BufferDecorations> {
         anyhow::bail!("not supported by FakeExtension")
     }
 

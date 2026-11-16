@@ -1,5 +1,16 @@
 use super::*;
 
+/// The type tag of the folds that [`Editor::set_concealments`] makes.
+struct ConcealmentFold;
+
+/// A range of text that is hidden, or drawn as a short replacement.
+#[derive(Clone, Debug)]
+pub struct Concealment {
+    pub range: Range<Anchor>,
+    /// Drawn in place of `range`; `None` hides the range completely.
+    pub replacement: Option<SharedString>,
+}
+
 impl GutterDimensions {
     /// The width of the space reserved for the fold indicators,
     /// use alongside 'justify_end' and `gutter_width` to
@@ -725,6 +736,89 @@ impl Editor {
         self.display_map.read(cx).fold_placeholder.clone()
     }
 
+    /// Replaces the editor's set of concealments: ranges of text that are
+    /// hidden, or drawn as a short replacement, without changing the buffer.
+    ///
+    /// Concealments are folds that only change how text is drawn: they show no
+    /// fold indicator in the gutter, are not persisted, and are not meant to be
+    /// toggled by the user. Concealments that are the same as before are kept,
+    /// so a caller can pass the whole desired set again after every change.
+    pub fn set_concealments(&mut self, concealments: Vec<Concealment>, cx: &mut Context<Self>) {
+        let type_id = TypeId::of::<ConcealmentFold>();
+        let snapshot = self.buffer.read(cx).snapshot(cx);
+        let display_snapshot = self.display_snapshot(cx);
+
+        type Key = (MultiBufferOffset, MultiBufferOffset, Option<SharedString>);
+        let existing: HashMap<Key, Range<Anchor>> = display_snapshot
+            .folds_in_range(MultiBufferOffset(0)..snapshot.len())
+            .filter(|fold| fold.placeholder.type_tag == Some(type_id))
+            .map(|fold| {
+                let range = fold.range.start..fold.range.end;
+                let key = (
+                    fold.range.start.to_offset(&snapshot),
+                    fold.range.end.to_offset(&snapshot),
+                    fold.placeholder.collapsed_text.clone(),
+                );
+                (key, range)
+            })
+            .collect();
+
+        let mut wanted: HashMap<Key, Range<Anchor>> = HashMap::default();
+        for concealment in concealments {
+            let start = concealment.range.start.to_offset(&snapshot);
+            let end = concealment.range.end.to_offset(&snapshot);
+            if start < end {
+                // An empty string, not `None`, hides the range, as in the keys
+                // of `existing`: `None` would draw the default ellipsis.
+                let replacement = Some(concealment.replacement.unwrap_or_default());
+                wanted.insert((start, end, replacement), concealment.range);
+            }
+        }
+
+        let stale_keys = existing
+            .keys()
+            .filter(|key| !wanted.contains_key(*key))
+            .collect::<Vec<_>>();
+        // Removing a fold of this type removes every one that overlaps it, so a
+        // kept concealment that overlaps a stale one is removed too: add it again.
+        let overlaps_stale = |key: &Key| {
+            stale_keys
+                .iter()
+                .any(|stale| key.0 < stale.1 && stale.0 < key.1)
+        };
+        let stale = stale_keys
+            .iter()
+            .map(|key| existing[*key].clone())
+            .collect::<Vec<_>>();
+        let added = wanted
+            .into_iter()
+            .filter(|(key, _)| !existing.contains_key(key) || overlaps_stale(key))
+            .map(|((_, _, replacement), range)| {
+                let placeholder = FoldPlaceholder {
+                    render: Arc::new(|_, _, _| gpui::Empty.into_any_element()),
+                    constrain_width: false,
+                    merge_adjacent: false,
+                    type_tag: Some(type_id),
+                    collapsed_text: replacement,
+                };
+                Crease::simple(range, placeholder)
+            })
+            .collect::<Vec<_>>();
+        if stale.is_empty() && added.is_empty() {
+            return;
+        }
+
+        self.display_map.update(cx, |map, cx| {
+            if !stale.is_empty() {
+                map.remove_folds_with_type(stale, type_id, cx);
+            }
+            if !added.is_empty() {
+                map.fold(added, cx);
+            }
+        });
+        cx.notify();
+    }
+
     pub fn insert_creases(
         &mut self,
         creases: impl IntoIterator<Item = Crease<Anchor>>,
@@ -835,6 +929,7 @@ impl Editor {
         };
         let inmemory_folds = display_snapshot
             .folds_in_range(MultiBufferOffset(0)..display_snapshot.buffer_snapshot().len())
+            .filter(|fold| fold.placeholder.type_tag != Some(TypeId::of::<ConcealmentFold>()))
             .map(|fold| {
                 let start = fold.range.start.text_anchor_in(buffer_snapshot);
                 let end = fold.range.end.text_anchor_in(buffer_snapshot);

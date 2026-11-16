@@ -1,0 +1,18 @@
+[package]
+name = "zed_markdown_live_preview"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+license = "Apache-2.0"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/markdown_live_preview.rs"
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+pulldown-cmark.workspace = true
+zed_extension_api = { path = "../../crates/extension_api" }

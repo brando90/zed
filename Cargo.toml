@@ -24,6 +24,7 @@ members = [
     "crates/bench_metrics",
     "crates/benchmarks",
     "crates/breadcrumbs",
+    "crates/buffer_decoration",
     "crates/buffer_diff",
     "crates/call",
     "crates/call_hierarchy",
@@ -261,6 +262,7 @@ members = [
 
     "extensions/glsl",
     "extensions/html",
+    "extensions/markdown-live-preview",
     "extensions/proto",
     "extensions/test-extension",
 
@@ -305,6 +307,7 @@ auto_update_ui = { path = "crates/auto_update_ui" }
 aws_http_client = { path = "crates/aws_http_client" }
 bedrock = { path = "crates/bedrock" }
 breadcrumbs = { path = "crates/breadcrumbs" }
+buffer_decoration = { path = "crates/buffer_decoration" }
 buffer_diff = { path = "crates/buffer_diff" }
 call = { path = "crates/call" }
 call_hierarchy = { path = "crates/call_hierarchy" }

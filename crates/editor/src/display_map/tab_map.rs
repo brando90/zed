@@ -989,6 +989,10 @@ impl<'a> TabStopCursor<'a> {
                 .map(|chunk| (TabStopChunk::new(chunk), 0))
         }) {
             let chunk_len = chunk.text.len() as u32;
+            if chunk_len == 0 {
+                // A fold that hides text (a concealment) draws an empty chunk.
+                continue;
+            }
 
             if chunk.tabs == 0 {
                 let chunk_remaining = chunk_len - chunk_position;

@@ -9,6 +9,7 @@ world extension {
     import process;
     import nodejs;
 
+    use buffer-decoration.{decorations};
     use common.{env-vars, range};
     use context-server.{context-server-configuration};
     use dap.{attach-request, build-task-template, debug-config, debug-adapter-binary, debug-task-definition, debug-request, debug-scenario, launch-request, resolved-task, start-debugging-request-arguments-request};
@@ -180,4 +181,10 @@ world extension {
     export dap-config-to-scenario: func(config: debug-config) -> result<debug-scenario, string>;
     export dap-locator-create-scenario: func(locator-name: string, build-config-template: build-task-template, resolved-label: string, debug-adapter-name: string) -> option<debug-scenario>;
     export run-dap-locator: func(locator-name: string, config: resolved-task) -> result<debug-request, string>;
+
+    /// Returns the decorations to draw over the text of a buffer.
+    ///
+    /// Called, after a short delay, when the text of a buffer in one of the
+    /// languages of the decorator changes. `text` is the whole buffer text.
+    export decorate-buffer: func(decorator-id: string, text: string) -> result<decorations, string>;
 }

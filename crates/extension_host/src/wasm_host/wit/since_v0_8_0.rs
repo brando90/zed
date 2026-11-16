@@ -80,6 +80,52 @@ impl From<Range> for std::ops::Range<usize> {
     }
 }
 
+impl From<buffer_decoration::TextStyle> for extension::TextStyle {
+    fn from(value: buffer_decoration::TextStyle) -> Self {
+        use buffer_decoration::TextStyle as Wit;
+        match value {
+            Wit::Bold => Self::Bold,
+            Wit::Italic => Self::Italic,
+            Wit::BoldItalic => Self::BoldItalic,
+            Wit::Strikethrough => Self::Strikethrough,
+            Wit::Code => Self::Code,
+            Wit::Link => Self::Link,
+            Wit::Quote => Self::Quote,
+            Wit::Dimmed => Self::Dimmed,
+            Wit::Heading1 => Self::Heading1,
+            Wit::Heading2 => Self::Heading2,
+            Wit::Heading3 => Self::Heading3,
+            Wit::Heading4 => Self::Heading4,
+            Wit::Heading5 => Self::Heading5,
+            Wit::Heading6 => Self::Heading6,
+        }
+    }
+}
+
+impl From<buffer_decoration::Decorations> for extension::BufferDecorations {
+    fn from(value: buffer_decoration::Decorations) -> Self {
+        Self {
+            styles: value
+                .styles
+                .into_iter()
+                .map(|styled| extension::StyledRange {
+                    range: styled.range.into(),
+                    style: styled.style.into(),
+                })
+                .collect(),
+            concealments: value
+                .concealments
+                .into_iter()
+                .map(|concealment| extension::Concealment {
+                    range: concealment.range.into(),
+                    replacement: concealment.replacement,
+                    reveal: concealment.reveal.into(),
+                })
+                .collect(),
+        }
+    }
+}
+
 impl From<Command> for extension::Command {
     fn from(value: Command) -> Self {
         Self {
@@ -923,6 +969,8 @@ impl slash_command::Host for WasmState {}
 
 #[async_trait]
 impl context_server::Host for WasmState {}
+
+impl buffer_decoration::Host for WasmState {}
 
 impl dap::Host for WasmState {
     async fn resolve_tcp_template(

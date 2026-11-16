@@ -1,3 +1,4 @@
+mod buffer_decoration;
 mod context_server;
 mod dap;
 mod lsp;
@@ -7,6 +8,7 @@ use std::{ops::Range, path::PathBuf};
 
 use util::redact::should_redact;
 
+pub use buffer_decoration::*;
 pub use context_server::*;
 pub use dap::*;
 pub use lsp::*;

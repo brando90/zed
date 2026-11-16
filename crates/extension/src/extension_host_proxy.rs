@@ -31,6 +31,7 @@ pub struct ExtensionHostProxy {
     snippet_proxy: RwLock<Option<Arc<dyn ExtensionSnippetProxy>>>,
     context_server_proxy: RwLock<Option<Arc<dyn ExtensionContextServerProxy>>>,
     debug_adapter_provider_proxy: RwLock<Option<Arc<dyn ExtensionDebugAdapterProviderProxy>>>,
+    buffer_decorator_proxy: RwLock<Option<Arc<dyn ExtensionBufferDecoratorProxy>>>,
     language_model_provider_proxy: RwLock<Option<Arc<dyn ExtensionLanguageModelProviderProxy>>>,
 }
 
@@ -56,6 +57,7 @@ impl ExtensionHostProxy {
             snippet_proxy: RwLock::default(),
             context_server_proxy: RwLock::default(),
             debug_adapter_provider_proxy: RwLock::default(),
+            buffer_decorator_proxy: RwLock::default(),
             language_model_provider_proxy: RwLock::default(),
         }
     }
@@ -88,6 +90,10 @@ impl ExtensionHostProxy {
         self.debug_adapter_provider_proxy
             .write()
             .replace(Arc::new(proxy));
+    }
+
+    pub fn register_buffer_decorator_proxy(&self, proxy: impl ExtensionBufferDecoratorProxy) {
+        self.buffer_decorator_proxy.write().replace(Arc::new(proxy));
     }
 
     pub fn register_language_model_provider_proxy(
@@ -364,6 +370,42 @@ impl ExtensionContextServerProxy for ExtensionHostProxy {
         };
 
         proxy.unregister_context_server(server_id, cx)
+    }
+}
+
+pub trait ExtensionBufferDecoratorProxy: Send + Sync + 'static {
+    fn register_buffer_decorator(
+        &self,
+        extension: Arc<dyn Extension>,
+        decorator_id: Arc<str>,
+        languages: Vec<Arc<str>>,
+        cx: &mut App,
+    );
+
+    fn unregister_buffer_decorator(&self, decorator_id: Arc<str>, cx: &mut App);
+}
+
+impl ExtensionBufferDecoratorProxy for ExtensionHostProxy {
+    fn register_buffer_decorator(
+        &self,
+        extension: Arc<dyn Extension>,
+        decorator_id: Arc<str>,
+        languages: Vec<Arc<str>>,
+        cx: &mut App,
+    ) {
+        let Some(proxy) = self.buffer_decorator_proxy.read().clone() else {
+            return;
+        };
+
+        proxy.register_buffer_decorator(extension, decorator_id, languages, cx)
+    }
+
+    fn unregister_buffer_decorator(&self, decorator_id: Arc<str>, cx: &mut App) {
+        let Some(proxy) = self.buffer_decorator_proxy.read().clone() else {
+            return;
+        };
+
+        proxy.unregister_buffer_decorator(decorator_id, cx)
     }
 }
 

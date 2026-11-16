@@ -1,0 +1,10 @@
+id = "markdown-live-preview"
+name = "Markdown Live Preview"
+description = "Edit Markdown in the editor with its syntax markers hidden until the cursor touches them, like Obsidian's live preview."
+version = "0.1.0"
+schema_version = 1
+authors = ["Brando Miranda"]
+repository = "https://github.com/zed-industries/zed"
+
+[buffer_decorators.markdown-live-preview]
+languages = ["Markdown"]

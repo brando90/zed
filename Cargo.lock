@@ -2460,6 +2460,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "buffer_decoration"
+version = "0.1.0"
+dependencies = [
+ "collections",
+ "editor",
+ "extension",
+ "gpui",
+ "language",
+ "log",
+ "multi_buffer",
+ "settings",
+ "theme",
+ "theme_settings",
+ "util",
+]
+
+[[package]]
 name = "buffer_diff"
 version = "0.1.0"
 dependencies = [
@@ -22517,6 +22534,7 @@ dependencies = [
  "auto_update",
  "auto_update_ui",
  "breadcrumbs",
+ "buffer_decoration",
  "call",
  "call_hierarchy",
  "channel",
@@ -22849,6 +22867,14 @@ name = "zed_html"
 version = "0.3.2"
 dependencies = [
  "zed_extension_api 0.7.0",
+]
+
+[[package]]
+name = "zed_markdown_live_preview"
+version = "0.1.0"
+dependencies = [
+ "pulldown-cmark 0.13.6",
+ "zed_extension_api 0.8.0",
 ]
 
 [[package]]

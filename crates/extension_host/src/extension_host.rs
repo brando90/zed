@@ -15,7 +15,7 @@ use collections::{BTreeMap, BTreeSet, FxHashSet, HashMap, HashSet, btree_map};
 pub use extension::ExtensionManifest;
 use extension::extension_builder::{CompileExtensionOptions, ExtensionBuilder};
 use extension::{
-    ExtensionContextServerProxy, ExtensionDebugAdapterProviderProxy, ExtensionEvents,
+    ExtensionBufferDecoratorProxy, ExtensionContextServerProxy, ExtensionDebugAdapterProviderProxy, ExtensionEvents,
     ExtensionGrammarProxy, ExtensionHostProxy, ExtensionLanguageProxy,
     ExtensionLanguageServerProxy, ExtensionSnippetProxy, ExtensionThemeProxy,
 };
@@ -1414,6 +1414,10 @@ impl ExtensionStore {
             for server_id in extension.manifest.context_servers.keys() {
                 self.proxy.unregister_context_server(server_id.clone(), cx);
             }
+            for decorator_id in extension.manifest.buffer_decorators.keys() {
+                self.proxy
+                    .unregister_buffer_decorator(decorator_id.clone(), cx);
+            }
             for adapter in extension.manifest.debug_adapters.keys() {
                 self.proxy.unregister_debug_adapter(adapter.clone());
             }
@@ -1710,6 +1714,15 @@ impl ExtensionStore {
                     for id in manifest.context_servers.keys() {
                         this.proxy
                             .register_context_server(extension.clone(), id.clone(), cx);
+                    }
+
+                    for (id, decorator) in &manifest.buffer_decorators {
+                        this.proxy.register_buffer_decorator(
+                            extension.clone(),
+                            id.clone(),
+                            decorator.languages.clone(),
+                            cx,
+                        );
                     }
 
                     for (debug_adapter, meta) in &manifest.debug_adapters {

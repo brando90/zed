@@ -926,6 +926,20 @@ impl Extension {
         }
     }
 
+    pub async fn call_decorate_buffer(
+        &self,
+        store: &mut Store<WasmState>,
+        decorator_id: &str,
+        text: &str,
+    ) -> wasmtime::Result<Result<latest::buffer_decoration::Decorations, String>> {
+        match self {
+            Extension::V0_8_0(ext) => ext.call_decorate_buffer(store, decorator_id, text).await,
+            _ => Err(wasmtime::Error::msg(
+                "`decorate_buffer` not available prior to v0.8.0",
+            )),
+        }
+    }
+
     pub async fn call_context_server_command(
         &self,
         store: &mut Store<WasmState>,

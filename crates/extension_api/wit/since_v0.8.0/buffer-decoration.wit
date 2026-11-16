@@ -1,0 +1,57 @@
+interface buffer-decoration {
+    use common.{range};
+
+    /// A theme-driven text style.
+    ///
+    /// Extensions pick a semantic style, never a color or a font: Zed maps each
+    /// style to the active theme, so decorations follow light and dark themes
+    /// and the user's font settings.
+    enum text-style {
+        bold,
+        italic,
+        bold-italic,
+        strikethrough,
+        /// Inline code.
+        code,
+        /// Link text.
+        link,
+        /// Quoted text.
+        quote,
+        /// De-emphasized text, for example syntax markers that stay visible.
+        dimmed,
+        heading1,
+        heading2,
+        heading3,
+        heading4,
+        heading5,
+        heading6,
+    }
+
+    /// A range of text that is drawn with a style.
+    record styled-range {
+        range: range,
+        style: text-style,
+    }
+
+    /// A range of text that is hidden, or drawn as a short replacement.
+    ///
+    /// The buffer text is never changed. While a cursor or selection touches
+    /// `reveal`, Zed shows the source text again, so the extension does not
+    /// need to be called when the cursor moves.
+    record concealment {
+        /// The text to hide or replace.
+        range: range,
+        /// Text drawn in place of `range`, for example a bullet for `-`.
+        /// `none` hides the range completely.
+        replacement: option<string>,
+        /// The span whose touch by a cursor or selection reveals `range`:
+        /// usually the whole token, such as `**bold**`.
+        reveal: range,
+    }
+
+    /// What an extension asks Zed to draw over a buffer.
+    record decorations {
+        styles: list<styled-range>,
+        concealments: list<concealment>,
+    }
+}

@@ -6,7 +6,7 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use async_trait::async_trait;
 use dap::{DebugRequest, StartDebuggingRequestArgumentsRequest};
 use extension::{
-    CodeLabel, Command, Completion, ContextServerConfiguration, DebugAdapterBinary,
+    BufferDecorations, CodeLabel, Command, Completion, ContextServerConfiguration, DebugAdapterBinary,
     DebugTaskDefinition, ExtensionCapability, ExtensionHostProxy, KeyValueStoreDelegate,
     ProjectDelegate, SlashCommand, SlashCommandArgumentCompletion, SlashCommandOutput, Symbol,
     WorktreeDelegate,
@@ -351,6 +351,25 @@ impl extension::Extension for WasmExtension {
                     .map_err(|err| store.data().extension_error(err))?;
 
                 Ok(output.into())
+            }
+            .boxed()
+        })
+        .await?
+    }
+
+    async fn decorate_buffer(
+        &self,
+        decorator_id: Arc<str>,
+        text: String,
+    ) -> Result<BufferDecorations> {
+        self.call(|extension, store| {
+            async move {
+                let decorations = extension
+                    .call_decorate_buffer(store, &decorator_id, &text)
+                    .await?
+                    .map_err(|err| store.data().extension_error(err))?;
+
+                Ok(BufferDecorations::from(decorations).sanitized(&text))
             }
             .boxed()
         })

@@ -145,6 +145,14 @@ pub trait Extension: Send + Sync + 'static {
         project: Arc<dyn ProjectDelegate>,
     ) -> Result<Command>;
 
+    /// Returns what the decorator `decorator_id` asks the editor to draw over
+    /// `text`.
+    async fn decorate_buffer(
+        &self,
+        decorator_id: Arc<str>,
+        text: String,
+    ) -> Result<BufferDecorations>;
+
     async fn context_server_configuration(
         &self,
         context_server_id: Arc<str>,
